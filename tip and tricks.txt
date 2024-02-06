@@ -1,0 +1,6 @@
+As most widgets have many configuration options in common, it can be useful to find out which are specific to a particular widget class. Comparing the list of options to that of a simpler widget, like a frame, is one way to do that.
+
+print(set(btn.configure().keys()) - set(frm.configure().keys()))
+Similarly, you can find the available methods for a widget object using the standard dir() function. If you try it, you’ll see there are over 200 common widget methods, so again identifying those specific to a widget class is helpful.
+print(dir(btn))
+print(set(dir(btn)) - set(dir(frm)))
