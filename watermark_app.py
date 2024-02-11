@@ -4,7 +4,7 @@ from tkinter import ttk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, ImageTk
 
-
+# Note to anyone reading this, the more work I did to this, the better idea classes would've been. I regret not doing so and I apologize for the long code. I will be using classes in the future
 
 horizonal_grid_number=12
 vertical_grid_number=24
@@ -35,6 +35,9 @@ zoom = 100
 
 zoom_label = None  # Define zoom_label at the top of your code
 
+# This is the original image with the alpha channel. This is being utilized to keep track of the original image with an alpha channel. Reason? The original image with an alpha channel is being modified when the opacity is changed. This is to keep track of the original image with the original alpha channel in order to revert any changes.
+# In short, I am keeping a copy of the original image with the original alpha channel. I can increase the opacity of an image with an alpha channel but I can't decrease the opacity, so my work around is to have this dictionary to pull the original image if I need to decrase the opacity
+original_image_alpha= {}
 
 ##################################  RESIZE FUNCTION ###########################################
 
@@ -42,7 +45,7 @@ zoom_label = None  # Define zoom_label at the top of your code
 # def resize_canvas(event):
 #     if image_list is None:
 #         return
-#     #print("resizing")
+#     ##print("resizing")
 
 #     draw_grid()
 
@@ -69,7 +72,7 @@ zoom_label = None  # Define zoom_label at the top of your code
 #         # Move the image to the new center of the canvas
 #         canvas.move(i, dx, dy)
 
-#         print(canvas.winfo_width(), canvas.winfo_height())
+#         #print(canvas.winfo_width(), canvas.winfo_height())
 
 
 
@@ -109,8 +112,8 @@ def on_press(event):
     if len(item_id) > 0 and item_id[0] in image_ids:
         image_id = item_id[0]
         selected_image=image_id
-        print(canvas.find_withtag("current"))
-        print("pressed")
+        #print(canvas.find_withtag("current"))
+        #print("pressed")
         highlight_image()
         canvas.tag_bind(image_id, '<Motion>', on_drag)
         canvas.tag_bind(image_id, '<ButtonRelease-1>', on_release)
@@ -121,7 +124,7 @@ def on_press(event):
     else:
         selected_image=None
         highlight_image()
-        print("No image was clicked")
+        #print("No image was clicked")
 
 
 def on_drag(event):
@@ -188,10 +191,10 @@ def on_drag(event):
 
         # Adjust the position towards the nearest grid lines
         if abs(dx) <= tolerance:
-            print(f"dx for point {point} is less than tolerance")
+            #print(f"dx for point {point} is less than tolerance")
             canvas.move(image_id, dx * 0.1, 0)
         if abs(dy) <= tolerance:
-            print(f"dy for point {point} is less than tolerance")
+            #print(f"dy for point {point} is less than tolerance")
             canvas.move(image_id, 0, dy * 0.1)
             # Here's how it works utilizing dy as an example:
             #     dy is the distance from the center of the image to the nearest horizontal grid line.
@@ -256,7 +259,7 @@ def highlight_image():
         # Store the rectangle ID so you can delete it later if needed
     else:
         canvas.delete('highlight')
-        print("No image is selected")
+        #print("No image is selected")
 
         # If the state has changed, update the menu
         if selected_image_previous_state is not None:
@@ -274,7 +277,7 @@ def unhightlight_image():
         selected_image_previous_state = None
 
         canvas.delete('highlight')
-        print("Unhighlighted")
+        #print("Unhighlighted")
 ##################################  DRAG FUNCTIONS END ###########################################
 
 ##################################  DROP FUNCTION START ##########################################
@@ -284,11 +287,11 @@ def on_drop(event):
         reset_zoom()
     # Parse the data from the event to get the file paths
     file_paths = shlex.split(event.data.replace("{", "'").replace("}", "'"))
-    print(file_paths)
+    #print(file_paths)
 
     # Add the first file path to the image list
     image_list.append(file_paths[0])
-    print(f"This is the image list: {image_list}")
+    #print(f"This is the image list: {image_list}")
 
     # Initialize the total height and widthof the images
    
@@ -312,7 +315,7 @@ def on_drop(event):
     image_width = image.width()
     image_height = image.height()
 
-    image_data = {'image_id': image_id, 'image': image, 'pil_image': pil_image, 'original_image_copy':image, 'image_width': image_width, 'image_height': image_height, 'zoom_level': 100, 'zoom_width': image.width(), 'zoom_height': image.height()}
+    image_data = {'image_id': image_id, 'image': image, 'pil_image': pil_image, 'original_image_copy':image, 'image_width': image_width, 'image_height': image_height, 'zoom_level': 100, 'zoom_width': image.width(), 'zoom_height': image.height(), 'opacity':[False, 100,], 'alpha': False}
 
     # Add the image to the images dictiory to prevent it from being garbage collected & the images_pil dictionary to allow resizing
     images[image_id]=image_data
@@ -357,7 +360,7 @@ def upload_image():
         # Store the image data in a dictionary
         image_width = image.width()
         image_height = image.height()
-        image_data = {'image_id': image_id, 'image': image, 'pil_image': pil_image, 'original_image_copy':image, 'image_width': image_width, 'image_height': image_height, 'zoom_level': 100, 'zoom_width': image.width(), 'zoom_height': image.height()}
+        image_data = {'image_id': image_id, 'image': image, 'pil_image': pil_image, 'original_image_copy':image, 'image_width': image_width, 'image_height': image_height, 'zoom_level': 100, 'zoom_width': image.width(), 'zoom_height': image.height(), 'opacity':[False, 100 ], 'alpha':False}
 
         
         # Keep a reference to the image object to prevent it from being garbage collected
@@ -534,31 +537,24 @@ def move_image_to_back():
 
 ##################################### MOVING FUNCTION END ############################################
         
-############################## BACK TO DEFAULT MENU START ############################################
-
-
-def back_to_default_menu():
-    # Unbind the drag and release events for the selected image and unhighlight the image
-    global selected_image
-    
-    selected_image = None
-    unhightlight_image()
-    # Delete all the frames, to get back to the main menu
-    delete_all_frames()
-    default_menu("disabled")
-
-############################## BACK TO DEFAULT MENU END ############################################
-
 ##################################  CHANGE SIZE FUNCTION START #######################################
 def change_image_size(new_width, new_height):
-    global selected_image
+    global selected_image, original_image_alpha
     # Get the original PIL Image
-    original_image = images_pil[selected_image]
+    if images[selected_image]['alpha'] == True:
+        original_image = original_image_alpha[selected_image]
+    else:
+        original_image = images_pil[selected_image]
 
+    print(original_image.mode)
     # Resize the image
-    print(new_height, new_width)
-    resized_image = original_image.resize((new_width, new_height))
+    #print(new_height, new_width)
+    resized_image = original_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
+    # Store the new pil image inside original_image_alpha if the image has an alpha channel
+    if images[selected_image]['alpha'] == True:
+        original_image_alpha[selected_image] = resized_image
+    
     # Convert the resized image to a PhotoImage object
     resized_photo = ImageTk.PhotoImage(resized_image)
 
@@ -578,8 +574,12 @@ def change_image_size(new_width, new_height):
     # Center the image
     center_image(selected_image, resized_photo)
     highlight_image()
+    print(images[selected_image]['opacity'][0])
+    if images[selected_image]['opacity'][0] == True:
+        check_alpha_channel()
+        change_opacity_level(images[selected_image]['opacity'][1], mode=2)
 
-def exit_changes(mode = 2, **kwargs):
+def exit_size_changes(mode = 2, **kwargs):
     ''' Function to exit the change size menu. Mode 1 is to exit the menu and go back to the default menu. Mode 2 is to exit the menu and save the changes. The kwargs are the new_width and new_height of the image'''
     
    
@@ -588,7 +588,7 @@ def exit_changes(mode = 2, **kwargs):
     elif mode == 2:
         new_width = kwargs.get('new_width')
         new_height = kwargs.get('new_height')
-        print(f"Here are the new width and height: {new_width}, {new_height}")
+        #print(f"Here are the new width and height: {new_width}, {new_height}")
         change_image_size(new_width= new_width, new_height=new_height)
         back_to_default_menu()
 
@@ -625,10 +625,10 @@ def change_size():
     if selected_image:
         # Get the image object from the images list
         change_image = images[selected_image]['image']
-        print(f"Here is the image: {change_image}, and the width is {change_image.width()}")
+        #print(f"Here is the image: {change_image}, and the width is {change_image.width()}")
         original_width, original_height = change_image.width(), change_image.height()
 
-        print(f"The following are: {original_width}, {original_height}")
+        #print(f"The following are: {original_width}, {original_height}")
         
         # Delete all the frames (This is to prevent the frames from stacking on top of each other), note that all my button options are frames
         delete_all_frames()
@@ -663,7 +663,7 @@ def change_size():
         # save_image = Image.open('./Icons/submit_icon.png')
         # save_image = save_image.resize((30, 20))  # Resize the image
         # save_photo = ImageTk.PhotoImage(save_image)
-        save_changes_button = ttk.Button(change_size_menu_frame, image=button_images['save'], command=lambda: exit_changes(new_width=int(width_entry.get()), new_height=int(height_entry.get())))
+        save_changes_button = ttk.Button(change_size_menu_frame, image=button_images['save'], command=lambda: exit_size_changes(new_width=int(width_entry.get()), new_height=int(height_entry.get())))
         create_tooltip(save_changes_button, "Save Changes")
         #save_changes_button.image = save_photo
         save_changes_button.pack(side=tk.LEFT, padx=3)
@@ -672,7 +672,7 @@ def change_size():
         # cancel_image = Image.open('./Icons/cancel_icon.png')
         # cancel_image = cancel_image.resize((21,20))  # Resize the image
         # cancel_photo = ImageTk.PhotoImage(cancel_image)
-        cancel_changes_button = ttk.Button(change_size_menu_frame, image=button_images['cancel'], command=lambda: exit_changes(mode=1))
+        cancel_changes_button = ttk.Button(change_size_menu_frame, image=button_images['cancel'], command=lambda: exit_size_changes(mode=1))
         create_tooltip(cancel_changes_button, "Cancel Changes")
         #cancel_changes_button.image = cancel_photo
         cancel_changes_button.pack(side=tk.LEFT, padx=3)
@@ -680,242 +680,231 @@ def change_size():
 ##################################  CHANGE SIZE FUNCTION END #########################################
 
 ################################## CHANGE OPACITY FUNCTION START ####################################
+"""
+Summary: Resolving RGBA Image Resizing After Opacity Modification
 
+Issue:
+- Encountered difficulties resizing RGBA images (images with an alpha channel) after their opacity had been modified.
+- The root cause was identified as the application using outdated image data stored in the 'original_image_alpha' dictionary, which did not reflect the latest opacity adjustments.
+
+Solution:
+- Implemented an update mechanism for the 'original_image_alpha' dictionary to ensure it always contains the most recent version of the image data after any modifications, including opacity changes.
+- This update mechanism involves refreshing the corresponding entry in 'original_image_alpha' whenever an image's opacity is adjusted, ensuring subsequent operations like resizing work with the updated image data.
+
+Key Changes:
+1. After modifying an image's opacity, the updated image data is now also stored back in the 'original_image_alpha' dictionary, overwriting the previous entry.
+2. This ensures that any future operations that rely on 'original_image_alpha' for image data (such as resizing) are using the most current version of the image.
+
+Benefits:
+- Ensures consistency and integrity of image data throughout the application, particularly for RGBA images that undergo multiple modifications.
+- Prevents issues related to using outdated image data, enabling seamless resizing and other operations post-opacity modification.
+
+Note: This solution emphasizes the importance of managing image data references carefully, especially when dealing with mutable image objects and multiple image transformations.
+
+"""
 
 
     
 
-alpha=False
-original_image_alpha= {}
+# alpha=False
+
 none_alpha_images = {}
-
-def change_opacity():
-    #An alpha channel is a component of a color image that designates transparency and opacity. In a standard RGB (Red, Green, Blue) image, colors are created by combining those three primary colors. However, in an RGBA image, a fourth component is added: Alpha.
-
-    #The alpha channel controls the transparency or opacity of a color. Its value ranges from 0 (completely transparent) to 255 (completely opaque). This allows for effects like transparency and blending, which can be used to create more complex and layered images.
-
-    #For example, if you have an image of a circle with an alpha channel, you can place that image on top of another image and see the second image through the transparent parts of the circle.
-    def check_alpha_channel():
-        global alpha, original_image_alpha, none_alpha_images
-        if selected_image:
-            # Get the image object from the images list
-            pil_image = images[selected_image]['pil_image']
-
-            # Once a previously non-alpha image is changed to an alpha image, it is stored in the original_image_alpha dictionary. This is to prevent the program from converting the image to an alpha image multiple times and solve any bugs
-            if (selected_image) in  none_alpha_images:
-                print("The image is already in the dictionary")
-                alpha = False
-                return
-
-            # Check if the image has an alpha channel
-            if pil_image.mode in ('RGBA', 'LA') or (pil_image.mode == 'P' and 'transparency' in pil_image.info):
-                print("The image has an alpha channel.")
-                alpha = True
-                if (selected_image) in original_image_alpha:
-                    print("The image is already in the dictionary")
-                else: 
-                    print("The image is not in the dictionary")
-                    print(selected_image)
-                    original_image_alpha[selected_image] = pil_image
-
-            else:
-                print("The image does not have an alpha channel 345345.")
-                alpha = False
-                none_alpha_images[selected_image] = pil_image
-            
+scale_value_label = None  # Define scale_value_label at the top of your code
 
 
-    # Defining the change_opacity_level function inside the change_opacity funciton to limit global functions
-    def change_opacity_level(value):
-        global alpha
-        if alpha == False:
 
-            # Update the label with the current scale value
-            round_value=round(float(value))
-
-            scale_value_label.config(text=f"Current scale value: {round_value}")
-
-            # Get the PIL Image from the images list
-            pil_image = images[selected_image]['pil_image']
+def exit_opacity_changes(value):
+    change_opacity_level(value)
+    back_to_default_menu()
 
 
-            # Change the opacity of the image
-            pil_image = pil_image.convert("RGBA")
-            data = list(pil_image.getdata())
-            for i, item in enumerate(data):
-                data[i] = item[0], item[1], item[2], int(round_value) * 255 // 100
-            pil_image.putdata(data)
-
-            # Convert the PIL Image back to a PhotoImage
-            change_image = ImageTk.PhotoImage(pil_image)
-
-            # Update the image on the canvas
-            canvas.itemconfig(selected_image, image=change_image)
-
-            # Update the image in the images list
-            images[selected_image]['image'] = change_image
-            images[selected_image]['pil_image'] = pil_image
-
-            # Highlight the image
-            highlight_image()
-
-        if alpha == True:
-            import numpy as np
-
-            round_value = round(float(value))
-            print(round_value)
-            scale_value_label.config(text=f"Current scale value: {round_value}")
-            original_image_data = np.array(original_image_alpha[selected_image])  # Convert the original image to a numpy array
-            
-            if original_image_data.ndim == 2:
-                # height, width = original_image_data.shape
-
-                # # Create an alpha channel with full opacity for each pixel (255 means fully opaque)
-                # alpha_channel = 255 * np.ones((height, width), dtype=np.uint8)
-
-                # # Stack the grayscale image data with the alpha channel to get an RGBA image
-                # rgba_image_data = np.dstack((original_image_data, original_image_data, original_image_data, alpha_channel))
-
-                # # Now rgba_image_data should have the shape (height, width, 4) and can be used with Image.fromarray
-                # original_pil_image = Image.fromarray(rgba_image_data, 'RGBA')
-                
-                # print(rgba_image_data.shape) # Print the shape of the original image
-                        # The grayscale image data is 2-dimensional, we need to convert it to RGBA
-        
-                # Replicate the grayscale data across the RGB channels
-                # Convert grayscale to RGB by replicating the grayscale data across the RGB channels
-                rgb_image_data = np.repeat(original_image_data[:, :, np.newaxis], 3, axis=2)
-
-                # If the colors appear inverted, invert them back
-                rgb_image_data = 255 - rgb_image_data  # Invert colors
-
-                # Create an alpha channel with full opacity for each pixel
-                alpha_channel = 255 * np.ones((original_image_data.shape[0], original_image_data.shape[1]), dtype=np.uint8)
-
-                # Combine the RGB data and alpha channel to get an RGBA image
-                rgba_image_data = np.dstack((rgb_image_data, alpha_channel))
-
-                # Convert the NumPy array to a PIL image
-                original_pil_image = Image.fromarray(rgba_image_data, 'RGBA')
-
-                # Correct the rotation if the image is rotated
-                # Adjust the angle based on the actual rotation of your images
-                original_pil_image = original_pil_image.rotate(90, expand=True)  # Rotate 90 degrees counterclockwise
-            else:
-                original_pil_image = Image.fromarray(original_image_data, 'RGBA')
-            
-            data = np.array(original_pil_image)  # Convert original image to numpy array
-
-            # Scale value from 0-100 to 0-255
-            opacity_scale = (int(round_value) / 100) * 255
-
-            # Modify the alpha channel based on the slider's value
-            red, green, blue, alpha_channel = data.T
-            new_alpha = ((alpha_channel / 255) * opacity_scale).astype(np.uint8)
-            new_data = np.dstack([red, green, blue, new_alpha])
-
-            # Create a new image from the modified data
-            new_pil_image = Image.fromarray(new_data, 'RGBA')
-
-            # Convert the PIL Image back to a PhotoImage for Tkinter
-            change_image = ImageTk.PhotoImage(new_pil_image)
-
-            # Update the image on the canvas
-            canvas.itemconfig(selected_image, image=change_image)
-
-            # Update the image in the images list
-            images[selected_image]['image'] = change_image
-            images[selected_image]['pil_image'] = new_pil_image
-
-            # Ensure the image object is kept alive by keeping a reference
-            images[selected_image]['photo_image'] = change_image  # Store this to prevent garbage collection
-
-            # Highlight the image
-            highlight_image()
-
-    # Defining the exit_changes function inside the change_opacity funciton to limit global functions
-    def exit_changes(value):
-        # Update the opacity level back to the original level
-        change_opacity_level(value)
-
-        # Go back to the default menu
-        back_to_default_menu()
-
-    # print(f"The value is: {value}")
+def check_alpha_channel():
+    global original_image_alpha, none_alpha_images
     if selected_image:
-        # # Get the image object from the images list
+        pil_image = images[selected_image]['pil_image']
+        if (selected_image) in  none_alpha_images:
+            print("The image is already in the dictionary")
+            images[selected_image]['alpha'] = False
+            return
         
-        check_alpha_channel()
+        if pil_image.mode in ('RGBA', 'LA') or (pil_image.mode == 'P' and 'transparency' in pil_image.info):
+            print("The image has an alpha channel.")
+            images[selected_image]['alpha'] = True
+            if (selected_image) in original_image_alpha:
+                print("The image is already in the dictionary")
+            else: 
+                print("The image is not in the dictionary")
+                print(selected_image)
+                original_image_alpha[selected_image] = pil_image
+        else:
+            images[selected_image]['alpha']  = False
+            none_alpha_images[selected_image] = pil_image
 
-        if alpha == False:
-            pil_image = images[selected_image]['pil_image']
+def change_opacity_level(value, mode=1):
+    if images[selected_image]['alpha']  == False:
+        round_value=round(float(value))
+        #scale_value_label.config(text=f"Current scale value: {round_value}")
+        # mode 1 indicates that it came from the change_opacity function. Mode 2 indicates that it came from the change_size function
+        # The change_size function will not have the scale_value_label, so it will not be updated. It calls this function to refresh the image with the saved opacity level that we store in our images dictionary
+        if mode == 1:
+            change_opacity(mode=2, round_value=round_value)
+        
+        pil_image = images[selected_image]['pil_image']
+        pil_image = pil_image.convert("RGBA")
+        data = list(pil_image.getdata())
+        for i, item in enumerate(data):
+            data[i] = item[0], item[1], item[2], int(round_value) * 255 // 100
+        pil_image.putdata(data)
+        change_image = ImageTk.PhotoImage(pil_image)
+        canvas.itemconfig(selected_image, image=change_image)
+        images[selected_image]['image'] = change_image
+        images[selected_image]['pil_image'] = pil_image
+        images[selected_image]['opacity'] = [True, round_value]
+        highlight_image()
 
-            # Convert the image to RGBA if it's not already
-            pil_image = pil_image.convert('RGBA')
+    if images[selected_image]['alpha']  == True:
+        import numpy as np
+        round_value = round(float(value))
+        # scale_value_label.config(text=f"Current scale value: {round_value}")
+        if mode == 1:
+            change_opacity(mode=2, round_value=round_value)
+        original_image_data = np.array(original_image_alpha[selected_image])  
+        print(original_image_data)
 
-            # Get the RGBA values of all pixels
-            pixels = list(pil_image.getdata())
+        print(original_image_data.ndim)
+        if original_image_data.ndim == 2:  
+            # Replicate the grayscale data across the RGB channels
+            # Convert grayscale to RGB by replicating the grayscale data across the RGB channels
+            rgb_image_data = np.repeat(original_image_data[:, :, np.newaxis], 3, axis=2)
 
-            # Calculate the average opacity
-            average_opacity = sum(alpha for r, g, b, alpha in pixels) / len(pixels)
+            # If the colors appear inverted, invert them back
+            rgb_image_data = 255 - rgb_image_data  # Invert colors
 
-            # Scale the average opacity to the range 0-100
-            average_opacity_scaled = (average_opacity / 255) * 100
+            # Create an alpha channel with full opacity for each pixel
+            alpha_channel = 255 * np.ones((original_image_data.shape[0], original_image_data.shape[1]), dtype=np.uint8)
 
-            # Now 'average_opacity_scaled' holds the average opacity level of the image in the range 0-100
-            opacity_level = (round(average_opacity_scaled))
+            # Combine the RGB data and alpha channel to get an RGBA image
+            rgba_image_data = np.dstack((rgb_image_data, alpha_channel))
 
-        if alpha == True:
-            # pil_image = images[selected_image]['pil_image']
+            # Convert the NumPy array to a PIL image
+            original_pil_image = Image.fromarray(rgba_image_data, 'RGBA')
 
-            # # Convert the image to RGBA if it's not already
-            # pil_image = pil_image.convert('RGBA')
+            # Correct the rotation if the image is rotated
+            # Adjust the angle based on the actual rotation of your images
+            #original_pil_image = original_pil_image.rotate(90, expand=True)  # Rotate 90 degrees counterclockwise
 
-            # # Get the RGBA values of all pixels
-            # pixels = list(pil_image.getdata())
+            # data = np.array(original_pil_image)  # Convert original image to numpy array
 
-            # # Calculate the average opacity
-            # average_opacity = sum(alpha for r, g, b, alpha in pixels) / len(pixels)
+            # # Scale value from 0-100 to 0-255
+            # opacity_scale = (int(round_value) / 100) * 255
 
-            # # Scale the average opacity to the range 0-100
-            # average_opacity_scaled = (average_opacity / 255) * 100
+            # # Modify the alpha channel based on the slider's value
+            # red, green, blue, alpha_channel = data.T
+            # new_alpha = ((alpha_channel / 255) * opacity_scale).astype(np.uint8)
+            # new_data = np.dstack([red, green, blue, new_alpha])
 
-            # # Now 'average_opacity_scaled' holds the average opacity level of the image in the range 0-100
-            # opacity_level = (round(average_opacity_scaled))
-            opacity_level = 100
-            average_opacity_scaled = 100
-        # Delete all the frames (This is to prevent the frames from stacking on top of each other), note that all my button options are frames
-        delete_all_frames()
+            # # Create a new image from the modified data
+            # new_pil_image = Image.fromarray(new_data, 'RGBA')
 
-        change_opacity_menu_frame= tk.Frame(window)
-        change_opacity_menu_frame.grid(row=0, column=0, sticky='w')
+            # # Convert the PIL Image back to a PhotoImage for Tkinter
+            # change_image = ImageTk.PhotoImage(new_pil_image)
 
-        # Create a label to display the value of the scale
-        scale_value_label = tk.Label(change_opacity_menu_frame, text=f"Current scale value: {round(average_opacity_scaled)}", font=("Arial", 10))
-        scale_value_label.pack(side=tk.LEFT, padx=3)
+            # # Update the image on the canvas
+            # canvas.itemconfig(selected_image, image=change_image)
 
-        scale = ttk.Scale(change_opacity_menu_frame, from_=1, to=100, command=change_opacity_level, orient=tk.HORIZONTAL, length=200)
-        scale.pack(side=tk.LEFT, padx=3)
-        scale.set(round(opacity_level))
+            # # Update the image in the images list
+            # images[selected_image]['image'] = change_image
+            # images[selected_image]['pil_image'] = new_pil_image
 
-        # Save Changes
-        # save_image = Image.open('./Icons/submit_icon.png')
-        # save_image = save_image.resize((30, 20))  # Resize the image
-        # save_photo = ImageTk.PhotoImage(save_image)
-        save_changes_button = ttk.Button(change_opacity_menu_frame, image=button_images['save'], command=lambda: back_to_default_menu())
-        create_tooltip(save_changes_button, "Save Changes")
-        #save_changes_button.image = save_photo
-        save_changes_button.pack(side=tk.LEFT, padx=3)
+            # # Ensure the image object is kept alive by keeping a reference
+            # images[selected_image]['photo_image'] = change_image  # Store this to prevent garbage collection
+            # images[selected_image]['opacity'] = [True, round_value]
+            # # Highlight the image
+            # highlight_image()
 
-        # Cancel Changes
-        #cancel_opacity = Image.open('./Icons/cancel_icon.png')
-        #cancel_opacity = cancel_opacity.resize((21,20))  # Resize the image
-        #cancel_opacity_photo = ImageTk.PhotoImage(cancel_opacity)
-        cancel_opacity_button = ttk.Button(change_opacity_menu_frame, image=button_images['cancel'], command= lambda: exit_changes(opacity_level))
-        create_tooltip(cancel_opacity_button, "Cancel Changes")
-        #cancel_opacity_button.image = cancel_opacity_photo
-        cancel_opacity_button.pack(side=tk.LEFT, padx=3)
 
+        elif original_image_data.ndim == 3:
+            original_pil_image = Image.fromarray(original_image_data, 'RGBA')
+            
+        data = np.array(original_pil_image)  # Convert original image to numpy array
+
+        # Scale value from 0-100 to 0-255
+        opacity_scale = (int(round_value) / 100) * 255
+
+        # Modify the alpha channel based on the slider's value
+        # red, green, blue, alpha_channel = data.T
+        red, green, blue, alpha_channel = data[:, :, 0], data[:, :, 1], data[:, :, 2], data[:, :, 3]
+        new_alpha = ((alpha_channel / 255) * opacity_scale).astype(np.uint8)
+        new_data = np.dstack([red, green, blue, new_alpha])
+
+        # Create a new image from the modified data
+        new_pil_image = Image.fromarray(new_data, 'RGBA')
+
+        # Convert the PIL Image back to a PhotoImage for Tkinter
+        change_image = ImageTk.PhotoImage(new_pil_image)
+
+        # Update the image on the canvas
+        canvas.itemconfig(selected_image, image=change_image)
+
+        # Update the image in the images list
+        images[selected_image]['image'] = change_image
+        images[selected_image]['pil_image'] = new_pil_image
+
+        # Ensure the image object is kept alive by keeping a reference
+        images[selected_image]['photo_image'] = change_image  # Store this to prevent garbage collection
+        images[selected_image]['opacity'] = [True, round_value]
+        # Highlight the image
+        highlight_image()
+
+
+def change_opacity(mode=1, round_value=None):
+    global scale_value_label
+    if mode == 1:
+        if selected_image:
+            # # Get the image object from the images list
+            
+            check_alpha_channel()
+            
+            if images[selected_image]['opacity'][0] == False:
+                opacity_level = 100
+                average_opacity_scaled = 100
+            else:
+                opacity_level = images[selected_image]['opacity'][1]
+                average_opacity_scaled = images[selected_image]['opacity'][1]
+
+            # Delete all the frames (This is to prevent the frames from stacking on top of each other), note that all my button options are frames
+            delete_all_frames()
+
+            change_opacity_menu_frame= tk.Frame(window)
+            change_opacity_menu_frame.grid(row=0, column=0, sticky='w')
+
+            # Create a label to display the value of the scale
+            scale_value_label = tk.Label(change_opacity_menu_frame, text=f"Current scale value: {round(average_opacity_scaled)}", font=("Arial", 10))
+            scale_value_label.pack(side=tk.LEFT, padx=3)
+
+            scale = ttk.Scale(change_opacity_menu_frame, from_=1, to=100, command=change_opacity_level, orient=tk.HORIZONTAL, length=200)
+            scale.pack(side=tk.LEFT, padx=3)
+            scale.set(round(opacity_level))
+
+            # Save Changes
+            # save_image = Image.open('./Icons/submit_icon.png')
+            # save_image = save_image.resize((30, 20))  # Resize the image
+            # save_photo = ImageTk.PhotoImage(save_image)
+            save_changes_button = ttk.Button(change_opacity_menu_frame, image=button_images['save'], command=lambda: back_to_default_menu())
+            create_tooltip(save_changes_button, "Save Changes")
+            #save_changes_button.image = save_photo
+            save_changes_button.pack(side=tk.LEFT, padx=3)
+
+            # Cancel Changes
+            #cancel_opacity = Image.open('./Icons/cancel_icon.png')
+            #cancel_opacity = cancel_opacity.resize((21,20))  # Resize the image
+            #cancel_opacity_photo = ImageTk.PhotoImage(cancel_opacity)
+            cancel_opacity_button = ttk.Button(change_opacity_menu_frame, image=button_images['cancel'], command= lambda: exit_opacity_changes(opacity_level))
+            create_tooltip(cancel_opacity_button, "Cancel Changes")
+            #cancel_opacity_button.image = cancel_opacity_photo
+            cancel_opacity_button.pack(side=tk.LEFT, padx=3)
+    if mode == 2:
+        scale_value_label.config(text=f"Current scale value: {round_value}")
 
         
 
@@ -929,7 +918,7 @@ def change_opacity():
 def zoom_in():
     global zoom
     zoom += 10
-    print(f"Zoom level: {zoom}")
+    #print(f"Zoom level: {zoom}")
     for i in image_ids:
         # Get the original image
         original_image = images[i]['pil_image']
@@ -958,7 +947,7 @@ def zoom_in():
 def zoom_out():
     global zoom
     zoom -= 10
-    print(f"Zoom level: {zoom}")
+    #print(f"Zoom level: {zoom}")
     for i in image_ids:
         # Get the original image
         original_image = images[i]['pil_image']
@@ -988,7 +977,7 @@ def zoom_out():
 def reset_zoom():
     global zoom
     zoom = 100
-    print(f"Zoom level: {zoom}")
+    #print(f"Zoom level: {zoom}")
     for i in image_ids:
         # Get the original image
         original_image = images[i]['pil_image']
@@ -1017,10 +1006,10 @@ def reset_zoom():
 
 ############################### FIND ALL FRAMES FUNCTION START #######################################
 def delete_all_frames():
-    print("Finding all frames")
+    #print("Finding all frames")
     for widget in window.winfo_children():
         if isinstance(widget, tk.Frame):
-            print(f"Here is the {widget}")
+            #print(f"Here is the {widget}")
             widget.destroy()
 
 ################################## FIND ALL FRAMES FUNCTION END #####################################
@@ -1029,7 +1018,7 @@ def delete_all_frames():
 # def save_image_function():
 #     # Get the file path to save the image
 #     file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
-#     print(file_path)
+#     #print(file_path)
 #     if file_path:
 #         # Get the image from the canvas
 #         image = canvas.postscript(colormode='color')
@@ -1040,6 +1029,9 @@ def delete_all_frames():
             
 def save_image_function():
     # get rid of the highlighted rectangle
+    #if no images on screen, return
+    if images == {}:
+        return
     global selected_image
     selected_image = None
     unhightlight_image()
@@ -1173,7 +1165,21 @@ window.grid_rowconfigure(1, weight=0)
 
 #############################  TKINTER CONFIGURATIONS END ##########################################
 
+############################## BACK TO DEFAULT MENU START ############################################
 
+
+def back_to_default_menu():
+    # Unbind the drag and release events for the selected image and unhighlight the image
+    global selected_image, scale_value_label
+    # This is a global variable that contains the label configuration for the change_opacity function, to which I want to reset, incase the user is coming from change opacity screen
+    scale_value_label = None
+    selected_image = None
+    unhightlight_image()
+    # Delete all the frames, to get back to the main menu
+    delete_all_frames()
+    default_menu("disabled")
+
+############################## BACK TO DEFAULT MENU END ############################################
 
 
 ########################################## BINDINGS START ##########################################
