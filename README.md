@@ -1,4 +1,4 @@
-# Watermark App
+# Watermark App (Windows Only)
 
 ## Purpose
 This application is designed to allow users to create a watermarked image using any image as the watermark. It provides a range of features that make the watermarking process seamless and customizable, catering to both casual users and professionals.
